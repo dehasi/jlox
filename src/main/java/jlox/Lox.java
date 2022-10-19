@@ -8,6 +8,8 @@ import java.nio.file.Path;
 import java.util.List;
 
 class Lox {
+    private static boolean hasError = false;
+
     public static void main(String[] args) throws IOException {
         switch (args.length) {
             case 0:
@@ -44,4 +46,14 @@ class Lox {
             System.out.println(token);
         }
     }
+
+    private static void error(int line, String message) {
+        report(line, "", message);
+    }
+
+    private static void report(int line, String where, String message) {
+        System.err.printf("[line %d] Error%s:%s\n", line, where, message);
+        hasError = true;
+    }
+
 }
