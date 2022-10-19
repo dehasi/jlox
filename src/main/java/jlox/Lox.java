@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 class Lox {
     public static void main(String[] args) throws IOException {
@@ -36,6 +37,11 @@ class Lox {
     }
 
     private static void run(String source) {
-        new Scanner()
+        Scanner scanner = new Scanner(source);
+        List<Token> tokens = scanner.scanTokens();
+
+        for (Token token : tokens) {
+            System.out.println(token);
+        }
     }
 }
