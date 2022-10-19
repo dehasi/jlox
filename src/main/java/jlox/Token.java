@@ -1,0 +1,4 @@
+package jlox;
+
+class Token {
+}
