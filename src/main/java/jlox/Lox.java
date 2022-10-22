@@ -25,6 +25,7 @@ class Lox {
 
     private static void runFile(String path) throws IOException {
         run(Files.readString(Path.of(path)));
+        if(hasError) System.exit(65);
     }
 
     private static void runPrompt() throws IOException {
@@ -35,6 +36,7 @@ class Lox {
             String line = reader.readLine();
             if (line == null) break;
             run(line);
+            hasError = false;
         }
     }
 
@@ -47,7 +49,7 @@ class Lox {
         }
     }
 
-    private static void error(int line, String message) {
+     static void error(int line, String message) {
         report(line, "", message);
     }
 
@@ -55,5 +57,4 @@ class Lox {
         System.err.printf("[line %d] Error%s:%s\n", line, where, message);
         hasError = true;
     }
-
 }
