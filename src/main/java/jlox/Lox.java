@@ -40,13 +40,15 @@ class Lox {
         }
     }
 
-    private static void run(String source) {
+    /* visible for test */
+    static Expr run(String source) {
         Scanner scanner = new Scanner(source);
         List<Token> tokens = scanner.scanTokens();
+        Parser parser = new Parser(tokens);
+        Expr expression = parser.parse();
 
-        for (Token token : tokens) {
-            System.out.println(token);
-        }
+        if (hasError) return null;
+        else return expression;
     }
 
     static void error(int line, String message) {
@@ -56,5 +58,13 @@ class Lox {
     private static void report(int line, String where, String message) {
         System.err.printf("[line %d] Error%s:%s\n", line, where, message);
         hasError = true;
+    }
+
+    public static void error(Token token, String message) {
+        if (token.type() == TokenType.EOF) {
+            report(token.line(), " at end", message);
+        } else {
+            report(token.line(), "'" + token.lexeme() + "'", message);
+        }
     }
 }
