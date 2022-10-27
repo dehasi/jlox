@@ -10,14 +10,18 @@ class LoxTest {
 
     @Test void run_printsExpressions() {
         Map.of(
-                expr("1+1"), "(+ 1.0 1.0)",
-                expr("2+2*2"), "(+ 2.0 (* 2.0 2.0))",
-                expr("-1"), "(- 1.0)",
-                expr("1+12"), "(+ 1.0 12.0)").forEach(
+                expr("1+1"), "2",
+                expr("2+2*2"), "6",
+                expr("-1"), "-1",
+                expr("1+12"), "13",
+                expr("1==1"), "true",
+                expr("1==2"), "false",
+                expr("\"abc\"+\"cba\""), "abccba"
+        ).forEach(
                 (actual, expected) -> assertThat(actual).isEqualTo(expected));
     }
 
     private static String expr(String source) {
-        return new ASTPrinter().print(Lox.run(source));
+        return Lox.run(source);
     }
 }
