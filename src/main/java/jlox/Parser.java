@@ -1,14 +1,18 @@
 package jlox;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static jlox.TokenType.BANG;
 import static jlox.TokenType.BANG_EQUAL;
 import static jlox.TokenType.EOF;
+import static jlox.TokenType.EQUAL;
 import static jlox.TokenType.EQUAL_EQUAL;
 import static jlox.TokenType.FALSE;
 import static jlox.TokenType.GREATER;
 import static jlox.TokenType.GREATER_EQUAL;
+import static jlox.TokenType.IDENTIFIER;
+import static jlox.TokenType.LEFT_BRACE;
 import static jlox.TokenType.LEFT_PAREN;
 import static jlox.TokenType.LESS;
 import static jlox.TokenType.LESS_EQUAL;
@@ -16,12 +20,15 @@ import static jlox.TokenType.MINUS;
 import static jlox.TokenType.NIL;
 import static jlox.TokenType.NUMBER;
 import static jlox.TokenType.PLUS;
+import static jlox.TokenType.PRINT;
+import static jlox.TokenType.RIGHT_BRACE;
 import static jlox.TokenType.RIGHT_PAREN;
 import static jlox.TokenType.SEMICOLON;
 import static jlox.TokenType.SLASH;
 import static jlox.TokenType.STAR;
 import static jlox.TokenType.STRING;
 import static jlox.TokenType.TRUE;
+import static jlox.TokenType.VAR;
 
 class Parser {
     private final List<Token> tokens;
@@ -31,16 +38,76 @@ class Parser {
         this.tokens = tokens;
     }
 
-    Expr parse() {
+    List<Stmt> parse() {
+        List<Stmt> statements = new ArrayList<>();
+        while (!isAtEnd())
+            statements.add(declaration());
+        return statements;
+    }
+
+    private Stmt declaration() {
         try {
-            return expression();
-        } catch (ParseError ignore) {
+            if (match(VAR)) return varDeclaration();
+            if (match(LEFT_BRACE)) return new Stmt.Block(block());
+            else return statement();
+        } catch (ParseError e) {
+            synchronize();
             return null;
         }
     }
 
+    private List<Stmt> block() {
+        List<Stmt> statements = new ArrayList<>();
+        while (!check(RIGHT_BRACE) && !isAtEnd()) {
+            statements.add(declaration());
+        }
+        consume(RIGHT_BRACE, "Expect '}' after a block.");
+        return statements;
+    }
+
+    private Stmt varDeclaration() {
+        Token name = consume(IDENTIFIER, "Expect variable name.");
+        Expr initializer = null;
+        if (match(EQUAL))
+            initializer = expression();
+
+        consume(SEMICOLON, "Expect ';' after variable declatation");
+        return new Stmt.Var(name, initializer);
+    }
+
+    private Stmt statement() {
+        if (match(PRINT)) return printStatement();
+        return expressionStatement();
+    }
+
+    private Stmt printStatement() {
+        Expr value = expression();
+        consume(SEMICOLON, "Expect ';' after value.");
+        return new Stmt.Print(value);
+    }
+
+    private Stmt expressionStatement() {
+        Expr value = expression();
+        consume(SEMICOLON, "Expect ';' after expression.");
+        return new Stmt.Expression(value);
+    }
+
     private Expr expression() {
-        return equality();
+        return assignment();
+    }
+
+    private Expr assignment() {
+        Expr expr = equality();
+        if (match(EQUAL)) {
+            Token equals = previous();
+            Expr value = assignment();
+            if (expr instanceof Expr.Variable variable) {
+                Token name = variable.name;
+                return new Expr.Assign(name, value);
+            }
+            error(equals, "Invalid assignment target."); // no throw
+        }
+        return expr;
     }
 
     private Expr equality() {
@@ -100,6 +167,9 @@ class Parser {
         if (match(NUMBER, STRING))
             return new Expr.Literal(previous().literal());
 
+        if (match(IDENTIFIER))
+            return new Expr.Variable(previous());
+
         if (match(LEFT_PAREN)) {
             Expr expr = expression();
             consume(RIGHT_PAREN, "Expect ')' after expression.");
@@ -141,8 +211,8 @@ class Parser {
         return peek().type() == type;
     }
 
-    private void consume(TokenType type, String errorMessage) {
-        if (check(type)) advance();
+    private Token consume(TokenType type, String errorMessage) {
+        if (check(type)) return advance();
         else throw error(peek(), errorMessage);
     }
 

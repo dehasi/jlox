@@ -8,7 +8,6 @@ import java.nio.file.Path;
 import java.util.List;
 
 class Lox {
-
     private static final Interpreter interpreter = new Interpreter();
     private static boolean hasError = false;
     private static boolean hasRuntimeError = false;
@@ -44,15 +43,14 @@ class Lox {
         }
     }
 
-    /* visible for test */
-    static String run(String source) {
+    static void run(String source) {
         Scanner scanner = new Scanner(source);
         List<Token> tokens = scanner.scanTokens();
         Parser parser = new Parser(tokens);
-        Expr expression = parser.parse();
+        List<Stmt> statements = parser.parse();
 
-        if (hasError) return null;
-        else return new Interpreter().interpret(expression);
+        if (hasError) return;
+        interpreter.interpret(statements);
     }
 
     static void error(int line, String message) {

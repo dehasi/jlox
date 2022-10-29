@@ -60,12 +60,12 @@ class Scanner {
             entry("nil", NIL),
             entry("or", OR),
             entry("print", PRINT),
-            entry("RETURN", RETURN),
-            entry("SUPER", SUPER),
-            entry("THIS", THIS),
-            entry("TRUE", TRUE),
-            entry("VAR", VAR),
-            entry("WHILE", WHILE));
+            entry("return", RETURN),
+            entry("super", SUPER),
+            entry("this", THIS),
+            entry("true", TRUE),
+            entry("var", VAR),
+            entry("while", WHILE));
 
     private final String source;
     private final List<Token> tokens = new ArrayList<>();

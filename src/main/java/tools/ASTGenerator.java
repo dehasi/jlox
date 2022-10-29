@@ -17,16 +17,27 @@ class ASTGenerator {
         }
         String outputDir = args[0];
         defineAst(outputDir, "Expr", List.of(
-                "Binary: Expr left, Token operator, Expr right",
+                "Assign:   Token name, Expr value",
+                "Binary:   Expr left, Token operator, Expr right",
                 "Grouping: Expr expression",
-                "Literal: Object value",
-                "Unary: Token operator, Expr right"));
+                "Literal:  Object value",
+                "Unary:    Token operator, Expr right",
+                "Variable: Token name"));
+
+        defineAst(outputDir, "Stmt", List.of(
+                "Block      : List<Stmt> statements",
+                "Expression : Expr expression",
+                "Print      : Expr expression",
+                "Var        : Token name, Expr initializer"
+        ));
     }
 
     private static void defineAst(String outputDir, String baseName, List<String> types) throws IOException {
         var path = Path.of(outputDir, baseName + ".java").toAbsolutePath().toString();
         try (PrintWriter writer = new PrintWriter(path, UTF_8)) {
             writer.println("package jlox;");
+            writer.println();
+            writer.println("import java.util.List;");
             writer.println();
             writer.println("abstract sealed class " + baseName + permits(baseName, types) + " {");
             writer.println();
@@ -85,7 +96,7 @@ class ASTGenerator {
         writer.println();
         writer.println(tab.repeat(nesting) + "@Override <R> R accept(Visitor<R> visitor) {");
         ++nesting;
-        writer.println(tab.repeat(nesting) + "return visitor.visit" + className+baseName+ "(this);");
+        writer.println(tab.repeat(nesting) + "return visitor.visit" + className + baseName + "(this);");
         --nesting;
         writer.println(tab.repeat(nesting) + "}");
         // implement visitor: finish
@@ -94,7 +105,7 @@ class ASTGenerator {
 
     private static String permits(String baseName, List<String> types) {
         return " permits " + types.stream()
-                .map(t -> t.split(":")[0])
+                .map(t -> t.split(":")[0].trim())
                 .map(t -> baseName + "." + t)
                 .collect(joining(", "));
     }

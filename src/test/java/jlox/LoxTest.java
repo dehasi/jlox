@@ -1,27 +1,92 @@
 package jlox;
 
+import extension.StdErr;
+import extension.StdExtension;
+import extension.StdOut;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.util.Map;
+import java.io.ByteArrayOutputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@ExtendWith(StdExtension.class)
 class LoxTest {
 
+    @StdOut ByteArrayOutputStream stdOut;
+    @StdErr ByteArrayOutputStream stdErr;
+
     @Test void run_printsExpressions() {
-        Map.of(
-                expr("1+1"), "2",
-                expr("2+2*2"), "6",
-                expr("-1"), "-1",
-                expr("1+12"), "13",
-                expr("1==1"), "true",
-                expr("1==2"), "false",
-                expr("\"abc\"+\"cba\""), "abccba"
-        ).forEach(
-                (actual, expected) -> assertThat(actual).isEqualTo(expected));
+        var source = """
+                print 2+2*2;
+                print 1==1;
+                print 1==2;
+                print "abc"+"cba";
+                        """;
+
+        Lox.run(source);
+
+        assertThat("""
+                6
+                true
+                false
+                abccba
+                """).isEqualTo(stdOut.toString());
     }
 
-    private static String expr(String source) {
-        return Lox.run(source);
+    @Test void run_printsVariables() {
+        var source = """
+                var a = 1;
+                var b = 2;
+                print a + b;
+
+                var beverage = "espresso";
+                print beverage;
+                """;
+
+        Lox.run(source);
+
+        assertThat(stdOut.toString()).as(stdErr.toString()).isEqualTo("""
+                3
+                espresso
+                """);
+    }
+
+    @Test void run_printsDifferentScopes() {
+        var source = """
+                var a = "global a";
+                var b = "global b";
+                var c = "global c";
+                {
+                    var a = "outer a";
+                    var b = "outer b";
+                    {
+                        var a = "inner a";
+                        print a;
+                        print b;
+                        print c;
+                    }
+                    print a;
+                    print b;
+                    print c;
+                }
+                print a;
+                print b;
+                print c;
+                """;
+
+        Lox.run(source);
+
+        assertThat(stdOut.toString()).as(stdErr.toString()).isEqualTo("""
+                inner a
+                outer b
+                global c
+                outer a
+                outer b
+                global c
+                global a
+                global b
+                global c
+                """);
     }
 }
