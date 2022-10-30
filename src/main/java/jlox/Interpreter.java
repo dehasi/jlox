@@ -3,6 +3,8 @@ package jlox;
 import java.util.List;
 import java.util.Objects;
 
+import static jlox.TokenType.OR;
+
 class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     private Environment environment = new Environment();
@@ -23,6 +25,16 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         return value;
     }
 
+    @Override public Object visitLogicalExpr(Expr.Logical expr) {
+        Object left = evaluate(expr.left);
+        if (expr.operator.type() == OR) {
+            if (isTruthy(left)) return left; // true OR right = true
+        } else {
+            if (!isTruthy(left)) return left;// false OR right = false
+        }
+        return evaluate(expr.right);
+    }
+
     @Override public Void visitExpressionStmt(Stmt.Expression stmt) {
         evaluate(stmt.expression);
         return null;
@@ -36,6 +48,22 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     @Override public Void visitBlockStmt(Stmt.Block stmt) {
         executeBlock(stmt.statements, new Environment(environment));
+        return null;
+    }
+
+    @Override public Void visitIfStmt(Stmt.If stmt) {
+        Object value = evaluate(stmt.condition);
+        if (isTruthy(value))
+            execute(stmt.thenBranch);
+        else if (stmt.elseBranch != null)
+            execute(stmt.elseBranch);
+
+        return null;
+    }
+
+    @Override public Void visitWhileStmt(Stmt.While stmt) {
+        while (isTruthy(evaluate(stmt.condition)))
+            execute(stmt.body);
         return null;
     }
 

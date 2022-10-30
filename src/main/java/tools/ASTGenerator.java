@@ -21,23 +21,28 @@ class ASTGenerator {
                 "Binary:   Expr left, Token operator, Expr right",
                 "Grouping: Expr expression",
                 "Literal:  Object value",
+                "Logical:  Expr left, Token operator, Expr right",
                 "Unary:    Token operator, Expr right",
-                "Variable: Token name"));
+                "Variable: Token name"), List.of());
 
         defineAst(outputDir, "Stmt", List.of(
                 "Block      : List<Stmt> statements",
                 "Expression : Expr expression",
+                "If         : Expr condition, Stmt thenBranch, Stmt elseBranch",
                 "Print      : Expr expression",
-                "Var        : Token name, Expr initializer"
-        ));
+                "Var        : Token name, Expr initializer",
+                "While      : Expr condition, Stmt body"
+        ), List.of("import java.util.List;"));
     }
 
-    private static void defineAst(String outputDir, String baseName, List<String> types) throws IOException {
+    private static void defineAst(String outputDir, String baseName, List<String> types, List<String> imports) throws IOException {
         var path = Path.of(outputDir, baseName + ".java").toAbsolutePath().toString();
         try (PrintWriter writer = new PrintWriter(path, UTF_8)) {
             writer.println("package jlox;");
-            writer.println();
-            writer.println("import java.util.List;");
+            if (!imports.isEmpty()) {
+                writer.println();
+                writer.println(String.join("\n", imports));
+            }
             writer.println();
             writer.println("abstract sealed class " + baseName + permits(baseName, types) + " {");
             writer.println();

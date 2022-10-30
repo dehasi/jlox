@@ -3,15 +3,19 @@ package jlox;
 import java.util.ArrayList;
 import java.util.List;
 
+import static jlox.TokenType.AND;
 import static jlox.TokenType.BANG;
 import static jlox.TokenType.BANG_EQUAL;
+import static jlox.TokenType.ELSE;
 import static jlox.TokenType.EOF;
 import static jlox.TokenType.EQUAL;
 import static jlox.TokenType.EQUAL_EQUAL;
 import static jlox.TokenType.FALSE;
+import static jlox.TokenType.FOR;
 import static jlox.TokenType.GREATER;
 import static jlox.TokenType.GREATER_EQUAL;
 import static jlox.TokenType.IDENTIFIER;
+import static jlox.TokenType.IF;
 import static jlox.TokenType.LEFT_BRACE;
 import static jlox.TokenType.LEFT_PAREN;
 import static jlox.TokenType.LESS;
@@ -19,6 +23,7 @@ import static jlox.TokenType.LESS_EQUAL;
 import static jlox.TokenType.MINUS;
 import static jlox.TokenType.NIL;
 import static jlox.TokenType.NUMBER;
+import static jlox.TokenType.OR;
 import static jlox.TokenType.PLUS;
 import static jlox.TokenType.PRINT;
 import static jlox.TokenType.RIGHT_BRACE;
@@ -29,6 +34,7 @@ import static jlox.TokenType.STAR;
 import static jlox.TokenType.STRING;
 import static jlox.TokenType.TRUE;
 import static jlox.TokenType.VAR;
+import static jlox.TokenType.WHILE;
 
 class Parser {
     private final List<Token> tokens;
@@ -48,12 +54,24 @@ class Parser {
     private Stmt declaration() {
         try {
             if (match(VAR)) return varDeclaration();
-            if (match(LEFT_BRACE)) return new Stmt.Block(block());
             else return statement();
         } catch (ParseError e) {
             synchronize();
             return null;
         }
+    }
+
+    private Stmt ifDeclaration() {
+        consume(LEFT_PAREN, "Expect '(' after 'if'.");
+        var condition = expression();
+        consume(RIGHT_PAREN, "Expect ')' after 'if' condition.");
+
+        var thenBranch = statement();
+        Stmt elseBranch = null;
+        if (match(ELSE))
+            elseBranch = statement();
+
+        return new Stmt.If(condition, thenBranch, elseBranch);
     }
 
     private List<Stmt> block() {
@@ -76,8 +94,52 @@ class Parser {
     }
 
     private Stmt statement() {
+        if (match(FOR)) return forStatement();
+        if (match(IF)) return ifDeclaration();
         if (match(PRINT)) return printStatement();
+        if (match(WHILE)) return whileStatement();
+        if (match(LEFT_BRACE)) return new Stmt.Block(block());
         return expressionStatement();
+    }
+
+    private Stmt forStatement() {
+        consume(LEFT_PAREN, "Expect '(' after 'for'.");
+        Stmt initializer = null;
+        if (match(SEMICOLON))
+            initializer = null;
+        else if (match(VAR))
+            initializer = varDeclaration();
+        else
+            initializer = expressionStatement();
+
+        Expr condition;
+        if (match(SEMICOLON)) condition = new Expr.Literal(true);
+        else condition = expression();
+        consume(SEMICOLON, "Expect ';' after loop condition");
+
+        Expr increment;
+        if (match(RIGHT_PAREN)) increment = null;
+        else increment = expression();
+        consume(RIGHT_PAREN, "Expect ')' after for clauses.");
+
+        Stmt body = statement();
+
+        if (increment != null)
+            body = new Stmt.Block(List.of(body, new Stmt.Expression(increment)));
+
+        body = new Stmt.While(condition, body);
+
+        if (initializer != null)
+            body = new Stmt.Block(List.of(initializer, body));
+        return body;
+    }
+
+    private Stmt whileStatement() {
+        consume(LEFT_PAREN, "Expect '(' after 'if'.");
+        Expr condition = expression();
+        consume(RIGHT_PAREN, "Expect ')' after 'if' condition.");
+        Stmt body = statement();
+        return new Stmt.While(condition, body);
     }
 
     private Stmt printStatement() {
@@ -97,7 +159,7 @@ class Parser {
     }
 
     private Expr assignment() {
-        Expr expr = equality();
+        Expr expr = or();
         if (match(EQUAL)) {
             Token equals = previous();
             Expr value = assignment();
@@ -106,6 +168,26 @@ class Parser {
                 return new Expr.Assign(name, value);
             }
             error(equals, "Invalid assignment target."); // no throw
+        }
+        return expr;
+    }
+
+    private Expr or() {
+        Expr expr = and();
+        while (match(OR)) {
+            Token operator = previous();
+            Expr right = and();
+            expr = new Expr.Logical(expr, operator, right);
+        }
+        return expr;
+    }
+
+    private Expr and() {
+        Expr expr = equality();
+        while (match(AND)) {
+            Token operator = previous();
+            Expr right = equality();
+            expr = new Expr.Logical(expr, operator, right);
         }
         return expr;
     }

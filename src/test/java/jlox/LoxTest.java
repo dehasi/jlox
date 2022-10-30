@@ -102,4 +102,68 @@ class LoxTest {
                 global c
                 """);
     }
+
+    @Test void run_interpretsIf() {
+        var source = """
+                var a = 1;
+                var b = 2;
+                if(a > b) print a;
+                else print b;
+                 """;
+
+        Lox.run(source);
+
+        assertThat(stdOut.toString()).as(stdErr.toString()).isEqualToIgnoringNewLines("2");
+    }
+
+    @Test void run_doesShortCircuit() {
+        var source = """
+                print "hi" or 2;
+                print nil or "yes";
+                print nil and "yes";
+                print "yes" and nil;
+                 """;
+
+        Lox.run(source);
+
+        assertThat(stdOut.toString()).as(stdErr.toString()).isEqualToIgnoringNewLines("""
+                hi
+                yes
+                nil
+                nil
+                """);
+    }
+
+    @Test void run_executesWhileLoop() {
+        var source = """
+                var a = 3;
+                while (a > 0)
+                    print a = a-1;
+                 """;
+
+        Lox.run(source);
+
+        assertThat(stdOut.toString()).as(stdErr.toString()).isEqualToIgnoringNewLines("""
+                2
+                1
+                0
+                """);
+    }
+
+    @Test void run_executesForLoop() {
+        var source = """
+                var n = 3;
+                for (var i = 0; i < n; i = i + 1) {
+                   print i;
+                }
+                  """;
+
+        Lox.run(source);
+
+        assertThat(stdOut.toString()).as(stdErr.toString()).isEqualToIgnoringNewLines("""
+                0
+                1
+                2
+                """);
+    }
 }
