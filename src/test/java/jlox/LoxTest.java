@@ -52,6 +52,19 @@ class LoxTest {
                 """);
     }
 
+    @Test void run_printsReassignedVariables() {
+        var source = """
+                var a = 1;
+                print a = 2;
+                """;
+
+        Lox.run(source);
+
+        assertThat(stdOut.toString()).as(stdErr.toString()).isEqualTo("""
+                2
+                """);
+    }
+
     @Test void run_printsDifferentScopes() {
         var source = """
                 var a = "global a";
