@@ -137,8 +137,9 @@ class LoxTest {
     @Test void run_executesWhileLoop() {
         var source = """
                 var a = 3;
-                while (a > 0)
+                while (a > 0) {
                     print a = a-1;
+                }
                  """;
 
         Lox.run(source);
@@ -164,6 +165,100 @@ class LoxTest {
                 0
                 1
                 2
+                """);
+    }
+
+    @Test void run_executesFunction() {
+        var source = """
+                fun count(n) {
+                    if(n > 1) count(n-1);
+                    print n;
+                }
+                print count;
+                count(3);
+                  """;
+
+        Lox.run(source);
+
+        assertThat(stdOut.toString()).as(stdErr.toString()).isEqualToIgnoringNewLines("""
+                <fn count>
+                1
+                2
+                3
+                """);
+    }
+
+    @Test void run_returnsFromFunctions() {
+        var source = """
+                fun count(i) {
+                    var n = 1000;
+                    while(i < n) {
+                        if (i == 3) return n;
+                        print i;
+                        i = i + 1;
+                    }
+                }
+                var t = count(1);
+                print t;
+                  """;
+
+        Lox.run(source);
+
+        assertThat(stdOut.toString()).as(stdErr.toString()).isEqualToIgnoringNewLines("""
+                1
+                2
+                1000
+                """);
+    }
+
+    @Test void run_supportsClosures() {
+        var source = """
+                fun makeCounter() {
+                    var i = 0;
+                    fun count() {
+                        i = i + 1;
+                        print i;
+                    }
+                    return count;
+                }
+                var counter = makeCounter();
+                counter();
+                counter();
+                  """;
+
+        Lox.run(source);
+
+        assertThat(stdOut.toString()).as(stdErr.toString()).isEqualToIgnoringNewLines("""
+                1
+                2
+                """);
+    }
+
+    @Test void fibonacci() {
+        var source = """
+                fun fib(n) {
+                    if(n <= 1) return n;
+                    return fib(n-1) + fib(n-2);
+                }
+                                
+                for (var i = 0; i < 10; i = i + 1) {
+                    print fib(i);
+                }
+                  """;
+
+        Lox.run(source);
+
+        assertThat(stdOut.toString()).as(stdErr.toString()).isEqualToIgnoringNewLines("""
+                0
+                1
+                1
+                2
+                3
+                5
+                8
+                13
+                21
+                34
                 """);
     }
 }

@@ -1,6 +1,8 @@
 package jlox;
 
-abstract sealed class Expr permits Expr.Assign, Expr.Binary, Expr.Grouping, Expr.Literal, Expr.Logical, Expr.Unary, Expr.Variable {
+import java.util.List;
+
+abstract sealed class Expr permits Expr.Assign, Expr.Binary, Expr.Call, Expr.Grouping, Expr.Literal, Expr.Logical, Expr.Unary, Expr.Variable {
 
     abstract <R> R accept(Visitor<R> visitor);
 
@@ -8,6 +10,8 @@ abstract sealed class Expr permits Expr.Assign, Expr.Binary, Expr.Grouping, Expr
         R visitAssignExpr(Assign expr);
 
         R visitBinaryExpr(Binary expr);
+
+        R visitCallExpr(Call expr);
 
         R visitGroupingExpr(Grouping expr);
 
@@ -47,6 +51,22 @@ abstract sealed class Expr permits Expr.Assign, Expr.Binary, Expr.Grouping, Expr
 
         @Override <R> R accept(Visitor<R> visitor) {
             return visitor.visitBinaryExpr(this);
+        }
+    }
+
+    static final class Call extends Expr {
+        final Expr callee;
+        final Token paren;
+        final List<Expr> arguments;
+
+        Call(Expr callee, Token paren, List<Expr> arguments) {
+            this.callee = callee;
+            this.paren = paren;
+            this.arguments = arguments;
+        }
+
+        @Override <R> R accept(Visitor<R> visitor) {
+            return visitor.visitCallExpr(this);
         }
     }
 

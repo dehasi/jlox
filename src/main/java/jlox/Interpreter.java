@@ -7,7 +7,20 @@ import static jlox.TokenType.OR;
 
 class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
-    private Environment environment = new Environment();
+    final Environment globals = new Environment();
+    private Environment environment = globals;
+
+    Interpreter() {
+        globals.define("clock", new LoxCallable() {
+            @Override public int arity() {return 0;}
+
+            @Override public Object call(Interpreter interpreter, List<Object> arguments) {
+                return (double) System.currentTimeMillis() / 1000.0;
+            }
+
+            @Override public String toString() {return "<native fn>";}
+        });
+    }
 
     void interpret(List<Stmt> statements) {
         try {
@@ -17,22 +30,6 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         } catch (RuntimeError error) {
             Lox.runtimeError(error);
         }
-    }
-
-    @Override public Object visitAssignExpr(Expr.Assign expr) {
-        Object value = evaluate(expr.value);
-        environment.assign(expr.name, value);
-        return value;
-    }
-
-    @Override public Object visitLogicalExpr(Expr.Logical expr) {
-        Object left = evaluate(expr.left);
-        if (expr.operator.type() == OR) {
-            if (isTruthy(left)) return left; // true OR right = true
-        } else {
-            if (!isTruthy(left)) return left;// false OR right = false
-        }
-        return evaluate(expr.right);
     }
 
     @Override public Void visitExpressionStmt(Stmt.Expression stmt) {
@@ -67,16 +64,12 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         return null;
     }
 
-    private void executeBlock(List<Stmt> statements, Environment environment) {
-        Environment previous = this.environment;
-        try {
-            this.environment = environment;
-            for (Stmt statement : statements) {
-                execute(statement);
-            }
-        } finally {
-            this.environment = previous;
-        }
+    @Override public Void visitReturnStmt(Stmt.Return stmt) {
+        Object value = null;
+        if (stmt.value != null)
+            value = evaluate(stmt.value);
+
+        throw new Return(value);
     }
 
     @Override public Void visitVarStmt(Stmt.Var stmt) {
@@ -85,6 +78,28 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
             value = evaluate(stmt.initializer);
         environment.define(stmt.name.lexeme(), value);
         return null;
+    }
+
+    @Override public Void visitFunctionStmt(Stmt.Function stmt) {
+        LoxFunction loxFunction = new LoxFunction(stmt, environment);
+        environment.define(stmt.name.lexeme(), loxFunction);
+        return null;
+    }
+
+    @Override public Object visitAssignExpr(Expr.Assign expr) {
+        Object value = evaluate(expr.value);
+        environment.assign(expr.name, value);
+        return value;
+    }
+
+    @Override public Object visitLogicalExpr(Expr.Logical expr) {
+        Object left = evaluate(expr.left);
+        if (expr.operator.type() == OR) {
+            if (isTruthy(left)) return left; // true OR right = true
+        } else {
+            if (!isTruthy(left)) return left;// false OR right = false
+        }
+        return evaluate(expr.right);
     }
 
     @Override public Object visitBinaryExpr(Expr.Binary expr) {
@@ -134,6 +149,32 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     @Override public Object visitVariableExpr(Expr.Variable expr) {
         return environment.get(expr.name);
+    }
+
+    @Override public Object visitCallExpr(Expr.Call expr) {
+        Object callee = evaluate(expr.callee);
+        List<Object> arguments = expr.arguments.stream().map(this::evaluate).toList();
+
+        if (!(callee instanceof LoxCallable function))
+            throw new RuntimeError(expr.paren, "Can only call functions and classes.");
+
+        if (arguments.size() != function.arity())
+            throw new RuntimeError(expr.paren,
+                    "Expected " + function.arity() + " arguments, but got " + arguments.size() + ".");
+
+        return function.call(this, arguments);
+    }
+
+    void executeBlock(List<Stmt> statements, Environment environment) {
+        Environment previous = this.environment;
+        try {
+            this.environment = environment;
+            for (Stmt statement : statements) {
+                execute(statement);
+            }
+        } finally {
+            this.environment = previous;
+        }
     }
 
     private boolean isTruthy(Object object) {

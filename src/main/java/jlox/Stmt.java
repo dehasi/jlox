@@ -2,7 +2,7 @@ package jlox;
 
 import java.util.List;
 
-abstract sealed class Stmt permits Stmt.Block, Stmt.Expression, Stmt.If, Stmt.Print, Stmt.Var, Stmt.While {
+abstract sealed class Stmt permits Stmt.Block, Stmt.Expression, Stmt.Function, Stmt.If, Stmt.Print, Stmt.Return, Stmt.Var, Stmt.While {
 
     abstract <R> R accept(Visitor<R> visitor);
 
@@ -11,9 +11,13 @@ abstract sealed class Stmt permits Stmt.Block, Stmt.Expression, Stmt.If, Stmt.Pr
 
         R visitExpressionStmt(Expression stmt);
 
+        R visitFunctionStmt(Function stmt);
+
         R visitIfStmt(If stmt);
 
         R visitPrintStmt(Print stmt);
+
+        R visitReturnStmt(Return stmt);
 
         R visitVarStmt(Var stmt);
 
@@ -44,6 +48,22 @@ abstract sealed class Stmt permits Stmt.Block, Stmt.Expression, Stmt.If, Stmt.Pr
         }
     }
 
+    static final class Function extends Stmt {
+        final Token name;
+        final List<Token> params;
+        final List<Stmt> body;
+
+        Function(Token name, List<Token> params, List<Stmt> body) {
+            this.name = name;
+            this.params = params;
+            this.body = body;
+        }
+
+        @Override <R> R accept(Visitor<R> visitor) {
+            return visitor.visitFunctionStmt(this);
+        }
+    }
+
     static final class If extends Stmt {
         final Expr condition;
         final Stmt thenBranch;
@@ -69,6 +89,20 @@ abstract sealed class Stmt permits Stmt.Block, Stmt.Expression, Stmt.If, Stmt.Pr
 
         @Override <R> R accept(Visitor<R> visitor) {
             return visitor.visitPrintStmt(this);
+        }
+    }
+
+    static final class Return extends Stmt {
+        final Token keyword;
+        final Expr value;
+
+        Return(Token keyword, Expr value) {
+            this.keyword = keyword;
+            this.value = value;
+        }
+
+        @Override <R> R accept(Visitor<R> visitor) {
+            return visitor.visitReturnStmt(this);
         }
     }
 
