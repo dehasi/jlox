@@ -48,8 +48,12 @@ class Lox {
         List<Token> tokens = scanner.scanTokens();
         Parser parser = new Parser(tokens);
         List<Stmt> statements = parser.parse();
-
         if (hasError) return;
+
+        Resolver resolver = new Resolver(interpreter);
+        resolver.resolve(statements);
+        if (hasError) return;
+
         interpreter.interpret(statements);
     }
 
