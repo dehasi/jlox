@@ -6,7 +6,9 @@ import java.util.List;
 import static jlox.TokenType.AND;
 import static jlox.TokenType.BANG;
 import static jlox.TokenType.BANG_EQUAL;
+import static jlox.TokenType.CLASS;
 import static jlox.TokenType.COMMA;
+import static jlox.TokenType.DOT;
 import static jlox.TokenType.ELSE;
 import static jlox.TokenType.EOF;
 import static jlox.TokenType.EQUAL;
@@ -35,6 +37,7 @@ import static jlox.TokenType.SEMICOLON;
 import static jlox.TokenType.SLASH;
 import static jlox.TokenType.STAR;
 import static jlox.TokenType.STRING;
+import static jlox.TokenType.THIS;
 import static jlox.TokenType.TRUE;
 import static jlox.TokenType.VAR;
 import static jlox.TokenType.WHILE;
@@ -56,6 +59,7 @@ class Parser {
 
     private Stmt declaration() {
         try {
+            if (match(CLASS)) return classDeclaration();
             if (match(FUN)) return function("function");
             if (match(VAR)) return varDeclaration();
             else return statement();
@@ -65,7 +69,18 @@ class Parser {
         }
     }
 
-    private Stmt function(String kind) {
+    private Stmt classDeclaration() {
+        Token name = consume(IDENTIFIER, "Expect class name.");
+        consume(LEFT_BRACE, "Expect '{' before class body.");
+        List<Stmt.Function> methods = new ArrayList<>();
+        while (!check(RIGHT_BRACE) && !isAtEnd())
+            methods.add(function("method"));
+
+        consume(RIGHT_BRACE, "Expect '}' after class body.");
+        return new Stmt.Class(name, methods);
+    }
+
+    private Stmt.Function function(String kind) {
         Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
 
         consume(LEFT_PAREN, "Expect '(' after " + kind + " name.");
@@ -168,7 +183,7 @@ class Parser {
     private Stmt returnStatement() {
         Token keyword = previous();
         Expr value = null;
-        if(!check(SEMICOLON))
+        if (!check(SEMICOLON))
             value = expression();
         consume(SEMICOLON, "Expect ';' after return value.");
         return new Stmt.Return(keyword, value);
@@ -200,6 +215,8 @@ class Parser {
             if (expr instanceof Expr.Variable variable) {
                 Token name = variable.name;
                 return new Expr.Assign(name, value);
+            } else if (expr instanceof Expr.Get get) {
+                return new Expr.Set(get.object, get.name, value);
             }
             error(equals, "Invalid assignment target."); // no throw
         }
@@ -280,7 +297,10 @@ class Parser {
         while (true) {
             if (match(LEFT_PAREN))
                 expr = finishCall(expr);
-            else break;
+            else if (match(DOT)) {
+                Token name = consume(IDENTIFIER, "Expect property name after '.'.");
+                expr = new Expr.Get(expr, name);
+            } else break;
         }
         return expr;
     }
@@ -305,6 +325,9 @@ class Parser {
 
         if (match(NUMBER, STRING))
             return new Expr.Literal(previous().literal());
+
+        if(match(THIS))
+            return new Expr.This(previous());
 
         if (match(IDENTIFIER))
             return new Expr.Variable(previous());

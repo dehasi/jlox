@@ -2,12 +2,14 @@ package jlox;
 
 import java.util.List;
 
-abstract sealed class Stmt permits Stmt.Block, Stmt.Expression, Stmt.Function, Stmt.If, Stmt.Print, Stmt.Return, Stmt.Var, Stmt.While {
+abstract sealed class Stmt permits Stmt.Block, Stmt.Class, Stmt.Expression, Stmt.Function, Stmt.If, Stmt.Print, Stmt.Return, Stmt.Var, Stmt.While {
 
     abstract <R> R accept(Visitor<R> visitor);
 
     interface Visitor<R> {
         R visitBlockStmt(Block stmt);
+
+        R visitClassStmt(Class stmt);
 
         R visitExpressionStmt(Expression stmt);
 
@@ -33,6 +35,20 @@ abstract sealed class Stmt permits Stmt.Block, Stmt.Expression, Stmt.Function, S
 
         @Override <R> R accept(Visitor<R> visitor) {
             return visitor.visitBlockStmt(this);
+        }
+    }
+
+    static final class Class extends Stmt {
+        final Token name;
+        final List<Stmt.Function> methods;
+
+        Class(Token name, List<Stmt.Function> methods) {
+            this.name = name;
+            this.methods = methods;
+        }
+
+        @Override <R> R accept(Visitor<R> visitor) {
+            return visitor.visitClassStmt(this);
         }
     }
 

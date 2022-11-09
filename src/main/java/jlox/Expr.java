@@ -2,7 +2,7 @@ package jlox;
 
 import java.util.List;
 
-abstract sealed class Expr permits Expr.Assign, Expr.Binary, Expr.Call, Expr.Grouping, Expr.Literal, Expr.Logical, Expr.Unary, Expr.Variable {
+abstract sealed class Expr permits Expr.Assign, Expr.Binary, Expr.Call, Expr.Get, Expr.Grouping, Expr.Literal, Expr.Logical, Expr.Set, Expr.This, Expr.Unary, Expr.Variable {
 
     abstract <R> R accept(Visitor<R> visitor);
 
@@ -13,11 +13,17 @@ abstract sealed class Expr permits Expr.Assign, Expr.Binary, Expr.Call, Expr.Gro
 
         R visitCallExpr(Call expr);
 
+        R visitGetExpr(Get expr);
+
         R visitGroupingExpr(Grouping expr);
 
         R visitLiteralExpr(Literal expr);
 
         R visitLogicalExpr(Logical expr);
+
+        R visitSetExpr(Set expr);
+
+        R visitThisExpr(This expr);
 
         R visitUnaryExpr(Unary expr);
 
@@ -70,6 +76,20 @@ abstract sealed class Expr permits Expr.Assign, Expr.Binary, Expr.Call, Expr.Gro
         }
     }
 
+    static final class Get extends Expr {
+        final Expr object;
+        final Token name;
+
+        Get(Expr object, Token name) {
+            this.object = object;
+            this.name = name;
+        }
+
+        @Override <R> R accept(Visitor<R> visitor) {
+            return visitor.visitGetExpr(this);
+        }
+    }
+
     static final class Grouping extends Expr {
         final Expr expression;
 
@@ -107,6 +127,34 @@ abstract sealed class Expr permits Expr.Assign, Expr.Binary, Expr.Call, Expr.Gro
 
         @Override <R> R accept(Visitor<R> visitor) {
             return visitor.visitLogicalExpr(this);
+        }
+    }
+
+    static final class Set extends Expr {
+        final Expr object;
+        final Token name;
+        final Expr value;
+
+        Set(Expr object, Token name, Expr value) {
+            this.object = object;
+            this.name = name;
+            this.value = value;
+        }
+
+        @Override <R> R accept(Visitor<R> visitor) {
+            return visitor.visitSetExpr(this);
+        }
+    }
+
+    static final class This extends Expr {
+        final Token keyword;
+
+        This(Token keyword) {
+            this.keyword = keyword;
+        }
+
+        @Override <R> R accept(Visitor<R> visitor) {
+            return visitor.visitThisExpr(this);
         }
     }
 

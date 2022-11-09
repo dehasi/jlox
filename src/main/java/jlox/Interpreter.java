@@ -35,6 +35,19 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         }
     }
 
+    @Override public Void visitClassStmt(Stmt.Class stmt) {
+        environment.define(stmt.name.lexeme(), null);
+        Map<String, LoxFunction> methods = new HashMap<>();
+        for (Stmt.Function method : stmt.methods) {
+            LoxFunction function = new LoxFunction(method, environment, method.name.lexeme().equals("init"));
+            methods.put(method.name.lexeme(), function);
+        }
+
+        LoxClass klass = new LoxClass(stmt.name.lexeme(), methods);
+        environment.assign(stmt.name, klass);
+        return null;
+    }
+
     @Override public Void visitExpressionStmt(Stmt.Expression stmt) {
         evaluate(stmt.expression);
         return null;
@@ -84,7 +97,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     @Override public Void visitFunctionStmt(Stmt.Function stmt) {
-        LoxFunction loxFunction = new LoxFunction(stmt, environment);
+        LoxFunction loxFunction = new LoxFunction(stmt, environment, false);
         environment.define(stmt.name.lexeme(), loxFunction);
         return null;
     }
@@ -145,6 +158,21 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         return expr.value;
     }
 
+    @Override public Object visitSetExpr(Expr.Set expr) {
+        Object object = evaluate(expr.object);
+
+        if (!(object instanceof LoxInstance loxInstance))
+            throw new RuntimeError(expr.name, "Only instances have fields.");
+
+        Object value = evaluate(expr.value);
+        loxInstance.set(expr.name, value);
+        return null;
+    }
+
+    @Override public Object visitThisExpr(Expr.This expr) {
+        return lookupVariable(expr.keyword, expr);
+    }
+
     @Override public Object visitUnaryExpr(Expr.Unary expr) {
         Object right = evaluate(expr.right);
 
@@ -179,6 +207,13 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
                     "Expected " + function.arity() + " arguments, but got " + arguments.size() + ".");
 
         return function.call(this, arguments);
+    }
+
+    @Override public Object visitGetExpr(Expr.Get expr) {
+        Object object = evaluate(expr.object);
+        if (object instanceof LoxInstance loxInstance)
+            return loxInstance.get(expr.name);
+        throw new RuntimeError(expr.name, "Only instances have properties.");
     }
 
     void executeBlock(List<Stmt> statements, Environment environment) {
