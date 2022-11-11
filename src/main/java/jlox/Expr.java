@@ -2,7 +2,7 @@ package jlox;
 
 import java.util.List;
 
-abstract sealed class Expr permits Expr.Assign, Expr.Binary, Expr.Call, Expr.Get, Expr.Grouping, Expr.Literal, Expr.Logical, Expr.Set, Expr.This, Expr.Unary, Expr.Variable {
+abstract sealed class Expr permits Expr.Assign, Expr.Binary, Expr.Call, Expr.Get, Expr.Grouping, Expr.Literal, Expr.Logical, Expr.Set, Expr.Super, Expr.This, Expr.Unary, Expr.Variable {
 
     abstract <R> R accept(Visitor<R> visitor);
 
@@ -22,6 +22,8 @@ abstract sealed class Expr permits Expr.Assign, Expr.Binary, Expr.Call, Expr.Get
         R visitLogicalExpr(Logical expr);
 
         R visitSetExpr(Set expr);
+
+        R visitSuperExpr(Super expr);
 
         R visitThisExpr(This expr);
 
@@ -143,6 +145,20 @@ abstract sealed class Expr permits Expr.Assign, Expr.Binary, Expr.Call, Expr.Get
 
         @Override <R> R accept(Visitor<R> visitor) {
             return visitor.visitSetExpr(this);
+        }
+    }
+
+    static final class Super extends Expr {
+        final Token keyword;
+        final Token method;
+
+        Super(Token keyword, Token method) {
+            this.keyword = keyword;
+            this.method = method;
+        }
+
+        @Override <R> R accept(Visitor<R> visitor) {
+            return visitor.visitSuperExpr(this);
         }
     }
 

@@ -10,7 +10,7 @@ import java.io.ByteArrayOutputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-// Works if run one by one, I guess it's some multithreading problem with my extension.
+// Works if run one by one, I guess it's some multithreading problem with my StdExtension.
 @ExtendWith(StdExtension.class)
 class LoxClassTest {
 
@@ -120,6 +120,48 @@ class LoxClassTest {
                 Foo instance
                 Foo instance
                 Foo instance
+                """);
+    }
+
+    @Test void inheritance() {
+        var source = """
+                class Doughnut {
+                  cook() { print "Fry until golden brown."; }
+                  toOverride() { print "Override me!"; }
+                }
+                                
+                class BostonCream < Doughnut {
+                    toOverride() { print "Overrided."; }
+                }
+                                
+                BostonCream().cook();
+                BostonCream().toOverride();
+                  """;
+
+        Lox.run(source);
+
+        assertThat(stdOut.toString()).as(stdErr.toString()).isEqualTo("""
+                Fry until golden brown.
+                Overrided.
+                """);
+    }
+    @Test void superMethod() {
+        var source = """
+                class A { method() { print "A method"; } }
+                class B < A {
+                    method() { print "B method"; }
+                    
+                    test() { super.method(); }
+                }
+                class C < B {}
+                                
+                C().test();
+                  """;
+
+        Lox.run(source);
+
+        assertThat(stdOut.toString()).as(stdErr.toString()).isEqualTo("""
+                A method
                 """);
     }
 }

@@ -67,6 +67,16 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
         return null;
     }
 
+    @Override public Void visitSuperExpr(Expr.Super expr) {
+        if (currentClass == ClassType.NONE)
+            throw new RuntimeError(expr.keyword, "Can't use 'super' outside a class.");
+        if (currentClass != ClassType.SUBCLASS)
+            throw new RuntimeError(expr.keyword, "Can't use 'super' in a class with no superclass.");
+
+        resolveLocal(expr, expr.keyword);
+        return null;
+    }
+
     @Override public Void visitThisExpr(Expr.This expr) {
         if (currentClass != ClassType.CLASS)
             throw new RuntimeError(expr.keyword, "Can't use 'this' outside a class.");
@@ -101,6 +111,16 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
         declare(stmt.name);
         define(stmt.name);
 
+        if (stmt.superClass != null) {
+            currentClass = ClassType.SUBCLASS;
+            if (stmt.superClass.name.lexeme().equals(stmt.name.lexeme()))
+                throw new RuntimeError(stmt.superClass.name, "A class can't inherit from itself.");
+
+            resolve(stmt.superClass);
+            beginScope();
+            scopes.peek().put("super", true);
+        }
+
         beginScope();
         scopes.peek().put("this", true);
         for (Stmt.Function method : stmt.methods) {
@@ -108,6 +128,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
             if (method.name.lexeme().equals("init")) declaration = FunctionType.INITIALIZER;
             resolveFunction(method, declaration);
         }
+        if (stmt.superClass != null) endScope();
         endScope();
         currentClass = enclosingClass;
         return null;
@@ -222,6 +243,6 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     }
 
     private enum ClassType {
-        NONE, CLASS;
+        NONE, CLASS, SUBCLASS;
     }
 }
